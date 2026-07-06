@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>求索教育BMI标准自助检测</title>
+    <style>
+        :root {
+            --primary-color: 259, 73%;
+            --gradient-bg: linear-gradient(135deg, #a8c0ff 0%, #9d8df1 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --accent-color: hsl(var(--primary-color), 45%);
+            --text-color: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--gradient-bg);
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .gender-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .gender-option {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            font-size: 1.1rem;
+        }
+
+        .gender-option.active {
+            border-color: var(--accent-color);
+            background: rgba(157, 141, 241, 0.1);
+            box-shadow: 0 0 0 3px rgba(157, 141, 241, 0.2);
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(157, 141, 241, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, hsl(var(--primary-color), 60%), hsl(var(--primary-color), 40%));
+            border: none;
+            border-radius: 2rem;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #result {
+            margin-top: 2rem;
+            display: none;
+            text-align: center;
+        }
+
+        .bmi-value {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .barrage {
+            position: fixed;
+            white-space: nowrap;
+            pointer-events: none;
+            animation: barrage 12s linear forwards;
+            padding: 0.8rem 2rem;
+            border-radius: 2rem;
+            background: hsl(var(--hue), 85%, 65%);
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            opacity: 0.95;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            will-change: transform;
+            /* 新增：初始位置在屏幕右侧不可见区域 */
+            left: 100%; 
+        }
+
+        @keyframes barrage {
+            0% { transform: translateX(0) translateY(-50%); }
+            100% { transform: translateX(calc(-100% - 100vw)) translateY(-50%); }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 1.5rem;
+            }
+            .gender-option {
+                padding: 0.8rem;
+                font-size: 1rem;
+            }
+            .bmi-value {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 style="text-align: center; margin-bottom: 2rem; font-size: 1.8rem;">求索教育文职BMI标准自助检测</h1>
+        
+        <div class="gender-selector">
+            <div class="gender-option" onclick="selectGender('male')">男生</div>
+            <div class="gender-option" onclick="selectGender('female')">女生</div>
+        </div>
+
+        <div class="input-group">
+            <label>身高 (cm)</label>
+            <input type="number" id="height" placeholder="请输入身高">
+        </div>
+        
+        <div class="input-group">
+            <label>体重 (kg)</label>
+            <input type="number" id="weight" placeholder="请输入体重">
+        </div>
+
+        <button onclick="calculateBMI()">立即检测</button>
+
+        <div id="result">
+            <div class="bmi-value" id="bmiValue"></div>
+            <div id="bmiCategory"></div>
+            <div id="weightRecommendation"></div>
+        </div>
+    </div>
+
+    <script>
+        const messages = {
+            underweight: [
+                "🍃 同志要加强营养啊！",
+                "⚡ 这个体重打靶会被风吹偏～",
+                "🪁 再轻点要飞出战壕啦！",
+                "🌪️ 检测到体重过轻警报！",
+                "📉 体重曲线异常，建议增重！",
+                "🥩 食堂需要你！快去加餐！",
+                "⚖️ 质量不足，无法保持战术平衡！",
+                "🚩 红旗飘飘，体重也要跟上！"
+            ],
+            normal: [
+                "🎉 达标！保持战备状态！",
+                "🌟 优秀军人体格！",
+                "💪 完全符合部队标准！",
+                "🛡️ 完美战斗体型！",
+                "🎖️ 标兵级身体素质！",
+                "🏅 黄金比例，继续保持！",
+                "🔋 体能储备充足！",
+                "🦅 雄鹰般的标准体型！"
+            ],
+            overweight: [
+                "🐼 装备要超载了！",
+                "🎈 武装越野会掉队啊！",
+                "🚴 体能考核在召唤！",
+                "🚨 检测到质量超标！",
+                "⏳ 战术机动性需要优化！",
+                "🏋️ 训练场需要你！",
+                "🔥 燃烧吧，卡路里！",
+                "🥦 食堂蔬菜窗口欢迎你！"
+            ]
+        };
+
+        let selectedGender = null;
+
+        function selectGender(gender) {
+            selectedGender = gender;
+            document.querySelectorAll('.gender-option').forEach(el => {
+                el.classList.remove('active');
+                if(el.textContent === (gender === 'male' ? '男生' : '女生')) {
+                    el.classList.add('active');
+                }
+            });
+        }
+
+        function calculateBMI() {
+            const height = Number(document.getElementById('height').value);
+            const weight = Number(document.getElementById('weight').value);
+            
+            if (!selectedGender || !height || !weight) {
+                alert("请完整填写所有信息");
+                return;
+            }
+
+            const bmi = weight / ((height/100) ** 2);
+            const result = analyzeBMI(bmi, height/100, weight);
+            
+            showResult(bmi, result);
+            createBarrage(result.category);
+        }
+
+        function analyzeBMI(bmi, height, weight) {
+            const standards = {
+                male: [18.5, 24.9],
+                female: [18.0, 24.0]
+            };
+            
+            const [lower, upper] = standards[selectedGender];
+            
+            if (bmi < lower) {
+                return { 
+                    category: 'underweight',
+                    diff: (lower * height ** 2 - weight).toFixed(1),
+                    standard: `${lower}-${upper}`
+                };
+            }
+            if (bmi > upper) {
+                return {
+                    category: 'overweight',
+                    diff: (weight - upper * height ** 2).toFixed(1),
+                    standard: `${lower}-${upper}`
+                };
+            }
+            return { 
+                category: 'normal',
+                standard: `${lower}-${upper}`
+            };
+        }
+
+        function showResult(bmi, result) {
+            const bmiValue = document.getElementById('bmiValue');
+            const categoryEl = document.getElementById('bmiCategory');
+            const recommendationEl = document.getElementById('weightRecommendation');
+            
+            bmiValue.textContent = bmi.toFixed(1);
+            
+            const genderText = selectedGender === 'male' ? '男生' : '女生';
+            categoryEl.innerHTML = result.category === 'normal' 
+                ? `✅ 符合标准（${genderText}BMI ${result.standard}）`
+                : `⚠️ ${result.category === 'underweight' ? '偏瘦' : '偏胖'}（${genderText}标准 ${result.standard}）`;
+
+            if (result.diff) {
+                const action = result.category === 'underweight' ? '增加' : '减少';
+                recommendationEl.textContent = `建议${action} ${result.diff}kg`;
+            } else {
+                recommendationEl.textContent = '';
+            }
+            
+            document.getElementById('result').style.display = 'block';
+        }
+
+        function createBarrage(category) {
+            const validMessages = messages[category];
+            
+            // 生成40条弹幕
+            for(let i = 0; i < 60; i++) {
+                setTimeout(() => {
+                    const msg = validMessages[Math.floor(Math.random() * validMessages.length)];
+                    const barrage = document.createElement('div');
+                    
+                    barrage.className = 'barrage';
+                    barrage.style.top = `${Math.random() * 90 + 5}%`;
+                    barrage.style.setProperty('--hue', Math.floor(Math.random() * 360));
+                    barrage.style.animationDuration = `${Math.random() * 4 + 10}s`; // 10-14秒
+                    barrage.style.animationDelay = `${Math.random() * 2}s`; // 随机延迟0-2秒
+                    barrage.textContent = msg;
+
+                    document.body.appendChild(barrage);
+                    setTimeout(() => barrage.remove(), 14000);
+                }, i * 200); // 间隔生成
+            }
+        }
+    </script>
+</body>
+</html>
